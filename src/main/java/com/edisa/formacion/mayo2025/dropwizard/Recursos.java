@@ -1,22 +1,24 @@
 package com.edisa.formacion.mayo2025.dropwizard;
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.MultiFormatWriter;
-import com.google.zxing.WriterException;
+import com.google.zxing.*;
+import com.google.zxing.NotFoundException;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
+import javax.imageio.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 
 @Path("/api")
-@Produces("image/jpg")
 public class Recursos {
 
     @GET
@@ -25,7 +27,7 @@ public class Recursos {
                             @QueryParam("apellido") String apellido,
                             @QueryParam("edad") int edad) {
 
-    //    return Response.status(404).build();
+        //    return Response.status(404).build();
         return Response.ok("hola").build();
     }
 
@@ -40,6 +42,7 @@ public class Recursos {
 
     @GET
     @Path("/codabar/generar")
+    @Produces("image/jpg")
     public Response generarCodigoBarras(@QueryParam("texto") String texto,
                                         @QueryParam("formato_codigo_barras") String formatoCodigoBarras) throws WriterException {
 
@@ -58,6 +61,7 @@ public class Recursos {
         hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
 
         BitMatrix matrix = new MultiFormatWriter().encode(texto, format, width, height, hints);
+
 
         // Crear imagen a partir del BitMatrix
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -79,6 +83,36 @@ public class Recursos {
 
         byte[] imageData = baos.toByteArray();
         return Response.ok(imageData).type("image/jpg").build();
+
+    }
+
+    @POST
+    @Path("/codabar/generar")
+    @Consumes({"image/png", "image/jpg"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response leerCodigoBarras(InputStream inputImage) throws IOException {
+
+
+        try {
+            BufferedImage bufferedImage = ImageIO.read(inputImage);
+            if (bufferedImage == null) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\":\"No se pudo leer la imagen\"}").build();
+            }
+
+            LuminanceSource source = new BufferedImageLuminanceSource(bufferedImage);
+            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+
+            Result result = new MultiFormatReader().decode(bitmap);
+
+            String textoLeido = result.getText();
+
+            String json = "{\"texto\":\"" + textoLeido + "\"}";
+            return Response.ok(json, MediaType.APPLICATION_JSON).build();
+
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 
