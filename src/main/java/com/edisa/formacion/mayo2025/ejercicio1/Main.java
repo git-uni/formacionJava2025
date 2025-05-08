@@ -37,7 +37,7 @@ public class Main {
         hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
         hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
 
-        // Puedes usar directamente QRCodeWriter aquí en vez de Encoder
+
         QRCodeWriter writer = new QRCodeWriter();
         BitMatrix matrix = writer.encode(text, BarcodeFormat.QR_CODE, width, height, hints);
 
