@@ -26,8 +26,8 @@ public class Main {
         String text = args[0];
         String filePath = args[1];
         String formatStr = args[2].toUpperCase();
-        int width = 300;
-        int height = 300;
+        int width = 600;
+        int height = 600;
 
         BarcodeFormat format;
         try {
