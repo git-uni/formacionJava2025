@@ -4,6 +4,7 @@ import com.google.zxing.*;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.multi.GenericMultipleBarcodeReader;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import javax.imageio.*;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Arrays;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 
 @Path("/api")
@@ -106,18 +108,60 @@ public class Recursos {
             LuminanceSource source = new BufferedImageLuminanceSource(bufferedImage);
             BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 
-            Result result = new MultiFormatReader().decode(bitmap);
+            Map<DecodeHintType, Object> hints = new HashMap<>();
+            hints.put(DecodeHintType.POSSIBLE_FORMATS, Arrays.asList(
+                    BarcodeFormat.QR_CODE,
+                    BarcodeFormat.AZTEC,
+                    BarcodeFormat.DATA_MATRIX,
+                    BarcodeFormat.PDF_417,
+                    BarcodeFormat.CODE_128,
+                    BarcodeFormat.CODE_39,
+                    BarcodeFormat.EAN_13,
+                    BarcodeFormat.EAN_8,
+                    BarcodeFormat.UPC_A,
+                    BarcodeFormat.UPC_E,
+                    BarcodeFormat.ITF,
+                    BarcodeFormat.CODABAR
+            ));
 
-            String textoLeido = result.getText();
+            MultiFormatReader multiFormatReader = new MultiFormatReader();
+            multiFormatReader.setHints(hints);
+            GenericMultipleBarcodeReader multipleReader = new GenericMultipleBarcodeReader(multiFormatReader);
 
-            String json = "{\"texto\":\"" + textoLeido + "\"}";
-            return Response.ok(json, MediaType.APPLICATION_JSON).build();
+            Result[] results = multipleReader.decodeMultiple(bitmap);
 
+            if (results == null || results.length == 0) {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity("{\"error\":\"No se encontraron códigos\"}")
+                        .build();
+            }
+
+            StringBuilder jsonBuilder = new StringBuilder();
+            jsonBuilder.append("{ \"codigos\": [");
+
+            for (int i = 0; i < results.length; i++) {
+                String texto = results[i].getText();
+                String formato = results[i].getBarcodeFormat().toString();
+
+                jsonBuilder.append("{")
+                        .append("\"texto\":").append("\"").append(texto).append("\",")
+                        .append("\"formato\":").append("\"").append(formato).append("\"")
+                        .append("}");
+
+                if (i < results.length - 1) {
+                    jsonBuilder.append(",");
+                }
+            }
+
+            jsonBuilder.append("] }");
+
+            return Response.ok(jsonBuilder.toString(), MediaType.APPLICATION_JSON).build();
 
         } catch (NotFoundException e) {
-            throw new RuntimeException(e);
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"error\":\"No se encontraron códigos\"}")
+                    .build();
         }
-
     }
 
 }
