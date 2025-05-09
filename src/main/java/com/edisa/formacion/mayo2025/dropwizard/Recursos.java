@@ -82,7 +82,11 @@ public class Recursos {
         }
 
         byte[] imageData = baos.toByteArray();
-        return Response.ok(imageData).type("image/jpg").build();
+        Response.ResponseBuilder response = Response.ok(imageData).type("image/jpg");
+
+        response.header("Content-Disposition", "attachment; filename=\"qr.jpg\"");
+
+        return response.build();
 
     }
 
